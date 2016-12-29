@@ -11,6 +11,17 @@ Required ingredients for a VNA are:
   starting point for a 2-port VNA would be a pair of splitters, a pair of
   directional couplers, and a reference load.
 
+A Python API and a command-line tool are offered.
+
+This tool is structured as a Python package with a native C++ extension that
+directly uses the UHD C++ API. While it would be simpler in some ways to use
+GNU Radio blocks via Python (and avoid the need for a native C++ extension),
+there are two problems with a strictly GNU Radio based approach:
+
+* As of the initial writing (Dec 2016) GNU Radio does not support Python 3.
+* Certain advanced LO (local oscillator) configurations are not available via
+  the GNU Radio API.
+
 # Building
 
 First install UHD. Then:
