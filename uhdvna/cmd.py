@@ -8,7 +8,7 @@ try:
 except ImportError:
     coloredlogs = None
 
-from . import _control
+from . import VNA
 
 log = logging.getLogger(__name__)
 
@@ -17,6 +17,7 @@ def main(args=sys.argv):
     p = argparse.ArgumentParser(
         description='USRP-based Vector Network Analyzer')
     p.add_argument('--verbose', action='store_true')
+    p.add_argument('--uhdargs', default='')
 
     opts = p.parse_args(args[1:])
 
@@ -26,4 +27,10 @@ def main(args=sys.argv):
         logging.basicConfig(level=logging.DEBUG if opts.verbose else
                             logging.INFO)
 
-    print("Hello result is: %s" % _control.hello())
+    log.info("Initializing VNA with UHD args: [%s]", opts.uhdargs)
+    vna = VNA(opts.uhdargs)
+
+    log.info("Sampling point at 2.4GHz with 0dBm.")
+    value = vna.point(freq=2.4e9, power=0)
+
+    log.info("Value: %s", value)

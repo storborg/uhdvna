@@ -6,11 +6,11 @@ from setuptools import setup, find_packages, Extension
 prefix = os.getenv('PREFIX', '/usr/local')
 
 ext_modules = [
-    Extension('uhdvna._control',
+    Extension('uhdvna._native',
               include_dirs=[os.path.join(prefix, 'include')],
               libraries=['uhd'],
               library_dirs=[os.path.join(prefix, 'lib')],
-              sources=['uhdvna/_control.cpp'])
+              sources=['uhdvna/_native.cpp'])
 ]
 
 
