@@ -3,6 +3,7 @@
 #include <uhd/utils/safe_main.hpp>
 #include <uhd/usrp/multi_usrp.hpp>
 #include <uhd/exception.hpp>
+#include <boost/format.hpp>
 
 #include <iostream>
 
@@ -70,13 +71,41 @@ static PyMemberDef VNA_members[] = {
 };
 
 static PyObject *
-VNA_hello(VNA* self)
+VNA_hello(VNA *self)
 {
     return PyUnicode_FromFormat("Hello!");
 }
 
+static PyObject *
+VNA_point(VNA *self, PyObject *args)
+{
+    double ifbw = 100e3;
+    double freq = 2.45e9;
+    double power = 0;
+
+    if (!PyArg_ParseTuple(args, "dd", &freq, &power))
+        // XXX this is not the correct way to do exception handling
+        return PyLong_FromLong(-1);
+
+
+    std::cout << boost::format("Tuning source to %f MHz...") % (freq / 1e6) << std::endl;
+    uhd::tune_request_t tx_tune_request(freq);
+    self->usrp->set_tx_freq(tx_tune_request);
+
+    std::cout << boost::format("Tuning receiver offset by %f Hz...") % ifbw << std::endl;
+    uhd::tune_request_t rx_tune_request(freq - ifbw);
+    self->usrp->set_rx_freq(rx_tune_request);
+
+    std::cout << boost::format("Setting source power to %f dBm...") % power << std::endl;
+
+    std::cout << "Done." << std::endl;
+
+    return PyLong_FromLong(42);
+}
+
 static PyMethodDef VNA_methods[] = {
     {"hello", (PyCFunction)VNA_hello, METH_NOARGS, "Say hello."},
+    {"point", (PyCFunction)VNA_point, METH_VARARGS, "Sample a point."},
     {NULL}  // Sentinel
 };
 
