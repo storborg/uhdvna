@@ -8,7 +8,7 @@ prefix = os.getenv('PREFIX', '/usr/local')
 ext_modules = [
     Extension('uhdvna._native',
               include_dirs=[os.path.join(prefix, 'include')],
-              libraries=['uhd'],
+              libraries=['uhd', 'boost_system'],
               library_dirs=[os.path.join(prefix, 'lib')],
               sources=['uhdvna/_native.cpp'])
 ]

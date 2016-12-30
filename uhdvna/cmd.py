@@ -30,7 +30,10 @@ def main(args=sys.argv):
     log.info("Initializing VNA with UHD args: [%s]", opts.uhdargs)
     vna = VNA(opts.uhdargs)
 
-    log.info("Sampling point at 2.4GHz with 0dBm.")
-    value = vna.point(freq=2.4e9, power=0)
+    print("Saying hello...")
+    print("Response: %r" % vna.hello())
 
-    log.info("Value: %s", value)
+    # log.info("Sampling point at 2.4GHz with 0dBm.")
+    # value = vna.point(freq=2.4e9, power=0)
+
+    # log.info("Value: %s", value)
