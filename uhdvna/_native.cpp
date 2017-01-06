@@ -1,181 +1,62 @@
 #include <uhd/types/tune_request.hpp>
-#include <uhd/utils/thread_priority.hpp>
-#include <uhd/utils/safe_main.hpp>
 #include <uhd/usrp/multi_usrp.hpp>
-#include <uhd/exception.hpp>
+
 #include <boost/format.hpp>
+#include <boost/python.hpp>
 
 #include <iostream>
 
-#include <Python.h>
-#include <structmember.h>
+using namespace boost::python;
 
-typedef struct {
-    PyObject_HEAD
+struct VNA
+{
     uhd::usrp::multi_usrp::sptr usrp;
-} VNA;
 
-static void
-VNA_dealloc(VNA* self)
-{
-    Py_TYPE(self)->tp_free((PyObject*)self);
-    std::cout << "VNA_dealloc" << std::endl;
-}
+    VNA(std::string uhdargs) {
+        this->usrp = uhd::usrp::multi_usrp::make(uhdargs);
 
-static PyObject *
-VNA_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
-{
-    VNA *self;
-    self = (VNA *)type->tp_alloc(type, 0);
-    if (self != NULL) {
-        std::cout << "VNA_new" << std::endl;
+        std::cout << "Setting clock source to internal..." << std::endl;
+        this->usrp->set_clock_source("internal");
+
+        std::cout << "Setting sample rates..." << std::endl;
+        this->usrp->set_rx_rate(1e6);
+        this->usrp->set_tx_rate(1e6);
+
+        std::cout << "Setting RF gains..." << std::endl;
+        this->usrp->set_rx_gain(10);
+        this->usrp->set_tx_gain(10);
+
+        std::cout << "Ready." << std::endl;
     }
 
-    return (PyObject *)self;
-}
-
-static int
-VNA_init(VNA *self, PyObject *args, PyObject *kwds)
-{
-    std::cout << "VNA_init" << std::endl;
-
-    const char *rawargs;
-
-    static char *kwlist[] = {"uhdargs", NULL};
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "s", kwlist,
-                                     &rawargs))
-        return -1;
-
-    std::string uhdargs = rawargs;
-    self->usrp = uhd::usrp::multi_usrp::make(uhdargs);
-
-    std::cout << "Setting clock source to internal..." << std::endl;
-    self->usrp->set_clock_source("internal");
-
-    std::cout << "Setting sample rates..." << std::endl;
-    self->usrp->set_rx_rate(1e6);
-    self->usrp->set_tx_rate(1e6);
-
-    std::cout << "Setting RF gains..." << std::endl;
-    self->usrp->set_rx_gain(10);
-    self->usrp->set_tx_gain(10);
-
-    std::cout << "Ready." << std::endl;
-
-    return 0;
-}
-
-static PyMemberDef VNA_members[] = {
-    {NULL}  // Sentinel
-};
-
-static PyObject *
-VNA_hello(VNA *self)
-{
-    return PyUnicode_FromFormat("Hello!");
-}
-
-static PyObject *
-VNA_point(VNA *self, PyObject *args)
-{
-    double ifbw = 100e3;
-    double freq = 2.45e9;
-    double power = 0;
-
-    if (!PyArg_ParseTuple(args, "dd", &freq, &power))
-        // XXX this is not the correct way to do exception handling
-        return PyLong_FromLong(-1);
-
-
-    std::cout << boost::format("Tuning source to %f MHz...") % (freq / 1e6) << std::endl;
-    uhd::tune_request_t tx_tune_request(freq);
-    self->usrp->set_tx_freq(tx_tune_request);
-
-    std::cout << boost::format("Tuning receiver offset by %f Hz...") % ifbw << std::endl;
-    uhd::tune_request_t rx_tune_request(freq - ifbw);
-    self->usrp->set_rx_freq(rx_tune_request);
-
-    std::cout << boost::format("Setting source power to %f dBm...") % power << std::endl;
-
-    std::cout << "Done." << std::endl;
-
-    return PyLong_FromLong(42);
-}
-
-static PyMethodDef VNA_methods[] = {
-    {"hello", (PyCFunction)VNA_hello, METH_NOARGS, "Say hello."},
-    {"point", (PyCFunction)VNA_point, METH_VARARGS, "Sample a point."},
-    {NULL}  // Sentinel
-};
-
-static PyTypeObject VNAType = {
-    PyVarObject_HEAD_INIT(NULL, 0)
-    "_control.VNA",                 // tp_name
-    sizeof(VNA),                    // tp_basicsize
-    0,                              // tp_itemsize
-    (destructor)VNA_dealloc,        // tp_dealloc
-    0,                              // tp_print
-    0,                              // tp_getattr
-    0,                              // tp_setattr
-    0,                              // tp_reserved
-    0,                              // tp_repr
-    0,                              // tp_as_number
-    0,                              // tp_as_sequence
-    0,                              // tp_as_mapping
-    0,                              // tp_hash
-    0,                              // tp_call
-    0,                              // tp_str
-    0,                              // tp_getattro
-    0,                              // tp_setattro
-    0,                              // tp_as_buffer
-    Py_TPFLAGS_DEFAULT |
-        Py_TPFLAGS_BASETYPE,        // tp_flags
-    "UHD VNA interface",            // tp_doc
-    0,                              // tp_traverse
-    0,                              // tp_clear
-    0,                              // tp_richcompare
-    0,                              // tp_weaklistoffset
-    0,                              // tp_iter
-    0,                              // tp_iternext
-    VNA_methods,                    // tp_methods
-    VNA_members,                    // tp_members
-    0,                              // tp_getset
-    0,                              // tp_base
-    0,                              // tp_dict
-    0,                              // tp_descr_get
-    0,                              // tp_descr_set
-    0,                              // tp_dictoffset
-    (initproc)VNA_init,             // tp_init
-    0,                              // tp_alloc
-    VNA_new,                        // tp_new
-};
-
-static PyModuleDef mod = {
-    PyModuleDef_HEAD_INIT,
-    "_native",
-    "Native module for interfacing with UHD C++ API.",
-    -1,
-    NULL, NULL, NULL, NULL, NULL
-};
-
-PyMODINIT_FUNC
-PyInit__native(void)
-{
-    PyObject* m;
-
-    VNAType.tp_new = PyType_GenericNew;
-    if (PyType_Ready(&VNAType) < 0) {
-        return NULL;
+    std::string hello() {
+        return "Hello!";
     }
 
-    m = PyModule_Create(&mod);
-    if (m == NULL) {
-        return NULL;
+    std::complex<double> point(double freq, double power) {
+        double ifbw = 100e3;
+
+        std::cout << boost::format("Tuning source to %f MHz...") % (freq / 1e6) << std::endl;
+        uhd::tune_request_t tx_tune_request(freq);
+        this->usrp->set_tx_freq(tx_tune_request);
+
+        std::cout << boost::format("Tuning receiver offset by %f Hz...") % ifbw << std::endl;
+        uhd::tune_request_t rx_tune_request(freq - ifbw);
+        this->usrp->set_rx_freq(rx_tune_request);
+
+        std::cout << boost::format("Setting source power to %f dBm...") % power << std::endl;
+
+        std::cout << "Done." << std::endl;
+
+        // XXX
+        return std::complex<double>(0, 0);
     }
+};
 
-    Py_INCREF(&VNAType);
-    PyModule_AddObject(m, "VNA", (PyObject *)&VNAType);
-
-    return m;
+BOOST_PYTHON_MODULE(_native)
+{
+    class_<VNA>("VNA", init<std::string>())
+        .def("hello", &VNA::point)
+        .def("point", &VNA::point)
+    ;
 }

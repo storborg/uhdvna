@@ -8,7 +8,7 @@ prefix = os.getenv('PREFIX', '/usr/local')
 ext_modules = [
     Extension('uhdvna._native',
               include_dirs=[os.path.join(prefix, 'include')],
-              libraries=['uhd', 'boost_system'],
+              libraries=['uhd', 'boost_system', 'boost_python-py35'],
               library_dirs=[os.path.join(prefix, 'lib')],
               sources=['uhdvna/_native.cpp'])
 ]
@@ -37,4 +37,5 @@ setup(name='uhdvna',
       entry_points="""\
       [console_scripts]
       uhdvna = uhdvna.cmd:main
+      uhdvna-cmdtest = uhdvna._native:cmdtest
       """)
